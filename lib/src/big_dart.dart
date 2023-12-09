@@ -95,31 +95,101 @@ class Big extends Comparable<Big> {
   }
 
   Big(dynamic n) {
-    // Duplicate
-    if (n is Big) {
-      s = n.s;
-      e = n.e;
-      c = [...n.c];
-    } else {
-      if (n is! String) {
-        if (Big.strict == true) {
-          throw BigError(
-            code: BigErrorCode.invalidNumber,
-          );
-        }
-        // Minus zero?
-        // if (n == 0 && 1 / n < 0) {
-
-        // } else {
-        n = n.toString();
-        // }
+  // Duplicate
+  if (n is Big) {
+    s = n.s;
+    e = n.e;
+    c = [...n.c];
+  } else {
+    if (n is double) {
+      if (n.isNaN) {
+        s = 0;
+        e = 0;
+        c = [0];
+      } else if (n.isInfinite) {
+        s = n.isNegative ? -1 : 1;
+        e = 0;
+        c = [0];
+      } else { 
+        Big b = parse(this, n.toString());
+        c = b.c;
+        e = b.e;
+        s = b.s;
       }
-      Big b = parse(this, n);
+    } else if (n is int) {
+      Big b = parse(this, n.toString());
       c = b.c;
       e = b.e;
       s = b.s;
+    } else if (n is String) {
+      // Verificar si el string es numérico
+      if (_numeric.hasMatch(n)) {
+        Big b = parse(this, n);
+        c = b.c;
+        e = b.e;
+        s = b.s;
+      } else {
+        // Si no es numérico, establecer como NaN
+        s = 0;
+        e = 0; // Dejar e como null para representar NaN
+        c = [0];
+      }
+    } else {
+      if (Big.strict == true) {
+        throw BigError(
+          code: BigErrorCode.invalidNumber,
+        );
+      }
+      // Otro caso no manejado.
+      // Puedes agregar aquí un manejo adicional según tus necesidades.
     }
   }
+}
+
+
+  //Big(dynamic n) {
+  //// Duplicate
+  //if (n is Big) {
+  //  s = n.s;
+  //  e = n.e;
+  //  c = [...n.c];
+  //} else {
+  //  if (n is double) {
+  //    if (n.isNaN) {
+  //      s = 0;
+  //      e = 0;
+  //      c = [0];
+  //    } else if (n.isInfinite) {
+  //      s = n.isNegative ? -1 : 1;
+  //      e = 0;
+  //      c = [0];
+  //    } else { 
+  //      Big b = parse(this, n.toString());
+  //     c = b.c;
+  //     e = b.e;
+  //      s = b.s;
+  //    }
+  //  } else if (n is int) {
+  //    Big b = parse(this, n.toString());
+  //    c = b.c;
+  //    e = b.e;
+  //    s = b.s;
+  //  } else if (n is String) {
+  //    Big b = parse(this, n);
+  //    c = b.c;
+  //    e = b.e;
+  //    s = b.s;
+  //  } else {
+  //    if (Big.strict == true) {
+  //      throw BigError(
+  //        code: BigErrorCode.invalidNumber,
+  //      );
+  //    }
+  //    // Otro caso no manejado.
+  //    // Puedes agregar aquí un manejo adicional según tus necesidades.
+  //  }
+  //}
+  //}
 
   /// Parse the number or string value passed to a [Big] constructor.
   /// * x [Big] A Big number instance.
@@ -813,13 +883,31 @@ class Big extends Comparable<Big> {
   /// Omit the sign for negative zero.
 
   @override
-  toString() {
-    var x = this;
-    return stringify(x, x.e <= ne || x.e >= pe, x.c.isElementIsValid(0));
+  String toString() {
+  if (isNaN()) {
+    return double.nan.toString();
+  } else if (isInfinity()) {
+    return  double.infinity.toString();
   }
+
+  var str = stringify(this, e <= ne || e >= pe, true);
+
+  // Check for negative zero
+  if (str == "0" && s == -1) {
+    return "-0";
+  }
+
+  return str;
+}
 
   /// Return the value of this [Big] as a primitive number.
   double toNumber() {
+    var x = this;
+    if (x.isNaN()) {
+      return double.nan;
+    } else if (x.isInfinity()) {
+      return x.s == -1 ? double.negativeInfinity : double.infinity;
+    }
     var n = double.parse(stringify(this, true, true));
     if (strict == true && !eq(Big(n.toString()))) {
       throw BigError(
@@ -828,7 +916,6 @@ class Big extends Comparable<Big> {
     }
     return n;
   }
-
   /// Return a string representing the value of this [Big] rounded to sd significant digits using
   /// rounding mode rm, or [Big.rm] if rm is not specified.
   /// Use exponential notation if sd is less than the number of digits necessary to represent
@@ -863,13 +950,25 @@ class Big extends Comparable<Big> {
   /// Include the sign for negative zero.
   String valueOf() {
     var x = this;
-
+    if (x.isNaN()) {
+      return "NaN";
+    } else if (x.isInfinity()) {
+      return x.s == -1 ? "-Infinity" : "Infinity";
+    }
     if (Big.strict == true) {
       throw BigError(
         code: BigErrorCode.invalidNumber,
       );
     }
     return stringify(x, x.e <= ne || x.e >= pe, true);
+  }
+
+  bool isNaN() {
+    return c.length == 1 && c[0] == 0 && e == 0 && s == 0;
+  }
+
+  bool isInfinity() {
+    return c.length == 1 && c[0] == 0 && e == 0 && (s == 1 || s == -1);
   }
 
   Big selfRound([int? dp, RoundingMode? roundingMode]) {
