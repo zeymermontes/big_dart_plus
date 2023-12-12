@@ -28,6 +28,24 @@ enum RoundingMode {
   roundUp,
 }
 
+class BigNumberFormat {
+  String decimalSeparator;
+  String groupSeparator;
+  int groupSize;
+  int secondaryGroupSize;
+  String fractionGroupSeparator;
+  int fractionGroupSize;
+
+  BigNumberFormat({
+    this.decimalSeparator = '.',
+    this.groupSeparator = ',',
+    this.groupSize = 3,
+    this.secondaryGroupSize = 0,
+    this.fractionGroupSeparator = ' ',
+    this.fractionGroupSize = 0,
+  });
+}
+
 class Big extends Comparable<Big> {
   /// Returns an array of single digits
   late List<int> c;
@@ -78,6 +96,8 @@ class Big extends Comparable<Big> {
     }
   }
 
+
+
   /// Return a new Big whose value is the value of this [Big] rounded to a maximum precision of sd
   /// significant digits using rounding mode [rm], or [Big.rm] if [rm] is not specified.
   ///
@@ -93,6 +113,7 @@ class Big extends Comparable<Big> {
       _rm,
     );
   }
+  
 
   Big(dynamic n) {
   // Duplicate
@@ -190,7 +211,6 @@ class Big extends Comparable<Big> {
   //  }
   //}
   //}
-
   /// Parse the number or string value passed to a [Big] constructor.
   /// * x [Big] A Big number instance.
   /// * n [String] A numeric value.
@@ -1132,3 +1152,48 @@ extension FromDouble on double {
 extension FromString on String {
   Big toBig() => Big(this);
 }
+
+extension BigNumberFormatting on Big {
+  String toFormat({
+    int? dp,
+    RoundingMode? roundingMode,
+    BigNumberFormat? format,
+  }) {
+    format ??= BigNumberFormat();
+    roundingMode ??= Big.rm;
+
+    // Redondear el número según los decimales requeridos y el modo de redondeo
+    Big rounded = this.selfRound(dp, roundingMode);
+
+    // Convertir a una cadena con los decimales especificados
+    String numberString = rounded.toStringAsFixed(dp: dp);
+
+    // Aplicar el formato de agrupación y separador decimal
+    return _applyNumberFormat(numberString, format);
+  }
+
+  String _applyNumberFormat(String numberString, BigNumberFormat format) {
+    List<String> parts = numberString.split('.');
+    String integerPart = parts[0];
+    String decimalPart = parts.length > 1 ? parts[1] : '';
+
+    // Aplicar agrupación al parte entera
+    String formattedIntegerPart = _applyGrouping(integerPart, format.groupSeparator, format.groupSize);
+
+    // Aplicar agrupación al parte decimal (si es necesario)
+    String formattedDecimalPart = format.fractionGroupSize > 0
+        ? _applyGrouping(decimalPart, format.fractionGroupSeparator, format.fractionGroupSize)
+        : decimalPart;
+
+    // Unir las partes entera y decimal con el separador decimal
+    return formattedIntegerPart + (formattedDecimalPart.isNotEmpty ? format.decimalSeparator + formattedDecimalPart : '');
+  }
+
+  String _applyGrouping(String numberPart, String separator, int groupSize) {
+    if (groupSize <= 0 || numberPart.length <= groupSize) return numberPart;
+
+    RegExp regExp = RegExp('(.{1,$groupSize})(?=(.{${groupSize}})+(?!\\d))');
+    return numberPart.replaceAllMapped(regExp, (Match match) => '${match[1]}$separator');
+  }
+}
+
