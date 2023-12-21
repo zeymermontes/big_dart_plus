@@ -877,6 +877,38 @@ class Big extends Comparable<Big> {
   /// (-0).toFixed(dp:0) is '0', but (-0.1).toFixed(dp:0) is '-0'.
   /// (-0).toFixed(dp:1) is '0.0', but (-0.01).toFixed(dp:1) is '-0.0'.
   ///
+  bool isZero() {
+    // Un número es cero si su lista de dígitos ('c') contiene solo un cero y su exponente ('e') es cero o negativo.
+    return c.length == 1 && c[0] == 0 && e <= 0;
+  }
+
+
+ /// Return a string representing the value of this [Big] in normal notation rounded to [dp] fixed
+  /// decimal places using rounding mode [rm], or [Big.rm] if rm is not specified.
+  ///
+  /// * [dp]? [int] Decimal places: integer, 0 to maxDp inclusive.
+  /// * [rm]? [RoundingMode] Rounding mode.
+  ///
+  /// (-0).toFixed(dp:0) is '0', but (-0.1).toFixed(dp:0) is '-0'.
+  /// (-0).toFixed(dp:1) is '0.0', but (-0.01).toFixed(dp:1) is '-0.0'.
+  ///
+ // Método toFixed en Dart
+  String toFixed({int decimalPlaces=0, RoundingMode? roundingMode}) {
+    final intScale = Big(10).pow(decimalPlaces);
+    final scaledValue = this * intScale;
+    final result = scaledValue.selfRound();
+
+    if (decimalPlaces == 0) {
+      return result.toString();
+    } else {
+      final stringValue = result.toString();
+      final integerPart = stringValue.substring(0, stringValue.length - decimalPlaces);
+      final decimalPart = stringValue.substring(stringValue.length - decimalPlaces);
+      return '$integerPart.$decimalPart';
+    }
+  }
+
+
   String toStringAsFixed({int? dp, RoundingMode? rm}) {
     var x = this, n = x.c[0];
 
